@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe | AMOLED Dark</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --panel: #0a0a0a;
+            --border: #1a1a1a;
+            --text: #ffffff;
+            --text-muted: #666666;
+            --accent-x: #00f2ff; /* Electric Cyan */
+            --accent-o: #ff007a; /* Neon Pink */
+            --primary: #4f46e5;
+            --glow-x: 0 0 15px rgba(0, 242, 255, 0.6);
+            --glow-o: 0 0 15px rgba(255, 0, 122, 0.6);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Subtle grid background for a technical feel */
+        body::before {
+            content: "";
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg);
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .card {
+            background: var(--panel);
+            padding: 3rem;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 0 40px rgba(0,0,0,1);
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+            transition: all 0.4s ease;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 {
+            margin: 0 0 0.5rem 0;
+            font-weight: 800;
+            font-size: 2rem;
+            letter-spacing: -0.05em;
+            color: #fff;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .setup-box {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .id-section {
+            background: #000;
+            padding: 1.25rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .id-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+
+        #my-id-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-x);
+            margin-bottom: 1rem;
+            text-shadow: var(--glow-x);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        input {
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #000;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+        }
+
+        button {
+            padding: 14px 24px;
+            border-radius: 12px;
+            border: none;
+            background: var(--text);
+            color: #000;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            filter: brightness(0.9);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #fff;
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            text-transform: none;
+        }
+
+        .btn-outline:hover {
+            border-color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 2rem auto;
+            width: 300px;
+            height: 300px;
+        }
+
+        .cell {
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .cell:hover {
+            border-color: #333;
+            background: #050505;
+        }
+
+        .cell.taken { cursor: default; }
+        .cell.x { color: var(--accent-x); text-shadow: var(--glow-x); }
+        .cell.o { color: var(--accent-o); text-shadow: var(--glow-o); }
+
+        #status {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            min-height: 1.5rem;
+        }
+
+        .turn-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: var(--text-muted);
+        }
+        .turn-x { background: var(--accent-x); box-shadow: var(--glow-x); }
+        .turn-o { background: var(--accent-o); box-shadow: var(--glow-o); }
+    </style>
+</head>
+<body>
+
+    <div class="card" id="setup-screen">
+        <h1>Tic Tac Toe</h1>
+        <p>P2P / Encrypted / Dark</p>
+
+        <div class="setup-box">
+            <div class="id-section">
+                <span class="id-label">Your Connection ID</span>
+                <div id="my-id-display">Initializing...</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn-outline" onclick="copyId()">Copy ID</button>
+                    <button class="btn-outline" onclick="copyLink()">Invite Link</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="peer-id-input" placeholder="Friend's ID">
+                <button id="connect-btn">Join Match</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card hidden" id="game-screen">
+        <div id="status">Connecting...</div>
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="reset-btn" class="btn-outline hidden">New Match</button>
+            <button class="btn-outline" onclick="location.reload()">Exit</button>
+        </div>
+    </div>
+
+    <script>
+        let peer = new Peer();
+        let conn = null;
+        let mySymbol = '';
+        let currentTurn = 'X';
+        let gameState = Array(9).fill(null);
+        let gameActive = false;
+
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const myIdDisplay = document.getElementById('my-id-display');
+        const peerIdInput = document.getElementById('peer-id-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const statusDisplay = document.getElementById('status');
+        const resetBtn = document.getElementById('reset-btn');
+        const cells = document.querySelectorAll('.cell');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('id');
+
+        peer.on('open', (id) => {
+            myIdDisplay.innerText = id;
+            if (joinId) {
+                peerIdInput.value = joinId;
+                connectBtn.click();
+            }
+        });
+
+        peer.on('connection', (connection) => {
+            conn = connection;
+            mySymbol = 'X';
+            initGame();
+        });
+
+        connectBtn.onclick = () => {
+            const peerId = peerIdInput.value;
+            if (!peerId) return;
+            conn = peer.connect(peerId);
+            mySymbol = 'O';
+            initGame();
+        };
+
+        function initGame() {
+            setupScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+
+            conn.on('open', () => {
+                startFreshGame();
+                conn.on('data', (data) => {
+                    if (data.type === 'move') {
+                        if (data.symbol !== (mySymbol === 'X' ? 'O' : 'X')) return;
+                        if (gameState[data.index]) return;
+                        handleMove(data.index, data.symbol);
+                    } else if (data.type === 'reset') {
+                        startFreshGame();
+                    }
+                });
+            });
+
+            conn.on('close', () => {
+                alert('Opponent left the game.');
+                location.reload();
+            });
+        }
+
+        function startFreshGame() {
+            gameState = Array(9).fill(null);
+            currentTurn = 'X';
+            gameActive = true;
+            resetBtn.classList.add('hidden');
+            cells.forEach(c => {
+                c.innerText = '';
+                c.className = 'cell';
+            });
+            updateStatus();
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            const turnClass = currentTurn === 'X' ? 'turn-x' : 'turn-o';
+            statusDisplay.innerHTML = `<span class="turn-indicator ${turnClass}"></span> ${currentTurn === mySymbol ? 'Your Turn' : "Opponent's Turn"}`;
+            statusDisplay.style.color = 'var(--text)';
+        }
+
+        cells.forEach(cell => {
+            cell.onclick = () => {
+                const index = parseInt(cell.getAttribute('data-index'));
+                if (!gameActive || currentTurn !== mySymbol || gameState[index]) return;
+
+                handleMove(index, mySymbol);
+                conn.send({ type: 'move', index, symbol: mySymbol });
+            };
+        });
+
+        function handleMove(index, symbol) {
+            gameState[index] = symbol;
+            cells[index].innerText = symbol;
+            cells[index].classList.add('taken', symbol.toLowerCase());
+
+            if (checkWin()) {
+                statusDisplay.innerHTML = `✨ ${symbol} WINS ✨`;
+                statusDisplay.style.color = symbol === 'X' ? 'var(--accent-x)' : 'var(--accent-o)';
+                statusDisplay.style.textShadow = symbol === 'X' ? 'var(--glow-x)' : 'var(--glow-o)';
+                gameActive = false;
+                resetBtn.classList.remove('hidden');
+                return;
+            }
+
+            if (gameState.every(c => c !== null)) {
+                statusDisplay.innerText = "It's a Draw! 🤝";
+                gameActive = false;
+                resetBtn.classList.remove('hidden');
+                return;
+            }
+
+            currentTurn = currentTurn === 'X' ? 'O' : 'X';
+            updateStatus();
+        }
+
+        function checkWin() {
+            const patterns = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            return patterns.some(([a,b,c]) => gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]);
+        }
+
+        resetBtn.onclick = () => {
+            startFreshGame();
+            conn.send({ type: 'reset' });
+        };
+
+        function copyId() {
+            navigator.clipboard.writeText(myIdDisplay.innerText);
+            alert('ID Copied!');
+        }
+
+        function copyLink() {
+            const url = window.location.href.split('?')[0] + '?id=' + myIdDisplay.innerText;
+            navigator.clipboard.writeText(url);
+            alert('Invite link copied!');
+        }
+    </script>
+</body>
+</html>
